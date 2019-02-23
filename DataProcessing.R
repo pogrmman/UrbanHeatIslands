@@ -2,9 +2,11 @@ library(stringr)
 #install.packages("jsonlite")
 #install.packages("httr")
 #install.packages("dplyr")
+#install.packages("fuzzyjoin")
 library(jsonlite)
 library(httr)
 library(dplyr)
+library(fuzzyjoin)
 
 # Get data from the climate bureau API
 getClimateData <- function(url) {
@@ -58,15 +60,33 @@ big50$StAbbr <- citiesStates[,2]
 # Correlate to FIPS Codes
 fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", fileEncoding="UTF-8-BOM")
 stateFips <- fipsCodes %>% filter(Summary.Level == 40) %>% 
-  select(State.Code..FIPS., Area.Name..including.legal.statistical.area.description.) %>%
+  select(State.Code..FIPS., 
+         Area.Name..including.legal.statistical.area.description.) %>%
   rename(State = Area.Name..including.legal.statistical.area.description.) %>%
   rename(StateFIPS = State.Code..FIPS.)
 stAbbrs <- read.csv("./Data/state-abbrs.csv", fileEncoding="UTF-8-BOM")
 big50 <- big50 %>% left_join(stAbbrs, by="StAbbr") %>%
   left_join(stateFips, by="State")
 placeFips <- fipsCodes %>% filter(Summary.Level == 162) %>%
-  select(State.Code..FIPS., Place.Code..FIPS., Area.Name..including.legal.statistical.area.description.) %>%
+  select(State.Code..FIPS., Place.Code..FIPS., 
+         Area.Name..including.legal.statistical.area.description.) %>%
   rename(StateFIPS = State.Code..FIPS.) %>%
   rename(PlaceFIPS = Place.Code..FIPS.) %>%
   rename(Place = Area.Name..including.legal.statistical.area.description.)
-big50 <- makeMatches(big50, placeFips)
+# Puerto Rico Cities are Classified as Counties
+prFips <- fipsCodes %>% filter(State.Code..FIPS. == 72) %>%
+  filter(Summary.Level == 50) %>%
+  select(State.Code..FIPS., County.Code..FIPS., 
+         Area.Name..including.legal.statistical.area.description.) %>%
+  rename(StateFIPS = State.Code..FIPS.) %>%
+  rename(PlaceFIPS = County.Code..FIPS.) %>%
+  rename(Place = Area.Name..including.legal.statistical.area.description.)
+placeFips <- placeFips %>% bind_rows(prFips)
+big50 <- big50 %>% mutate(PlaceRe = paste("^", PrincipalCity, sep="")) %>%
+  mutate(StateCodeRe = paste("^", paste(StateFIPS, "$", sep=""), sep=""))
+big50 <- placeFips %>% 
+  regex_right_join(big50, by=c(StateFIPS = "StateCodeRe", 
+                               Place = "PlaceRe")) %>%
+  select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -DATE) %>%
+  rename(StateFIPS = StateFIPS.y) %>%
+  filter(!duplicated(PrincipalCity))
