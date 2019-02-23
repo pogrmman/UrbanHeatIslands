@@ -1,8 +1,10 @@
 library(stringr)
 #install.packages("jsonlite")
 #install.packages("httr")
+#install.packages("dplyr")
 library(jsonlite)
 library(httr)
+library(dplyr)
 
 # Get data from the climate bureau API
 getClimateData <- function(url) {
@@ -31,7 +33,6 @@ getDataType <- function(data, type) {
   return(data[data$datatype == type,])
 }
 
-
 # Get population of all metro areas July 1, 2016
 metroPops <- getCensusData("2016/pep/population?get=POP,GEONAME&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*&DATE=9")
 # Cleanup data
@@ -49,18 +50,18 @@ big50 <- metroPops[1:50,]
 pat <- "(.*)[:space:](Metro Area)$"
 big50$GEONAME <- str_match(big50$GEONAME, pat)[,2]
 # Assume principal city and state are first listed in name
-pat <- "^([A-Z][a-z\\.]+(?:[:space:](?:[A-Z][a-z\\.]+))*)[^,]*,[:space:]([A-Z]{2})"
+pat <- "^([A-Z][a-z\\.]+(?:[/[:space:]](?:[A-Z][a-z\\.]+))*)[^,]*,[:space:]([A-Z]{2})"
 citiesStates <- str_match(big50$GEONAME, pat)[,2:3]
 big50$PrincipalCity <- citiesStates[,1]
 big50$StAbbr <- citiesStates[,2]
 
 # Correlate to FIPS Codes
-fipsCodes <- read.csv("Data/all-geocoding-v2017.csv", fileEncoding="UTF-8-BOM")
+fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", fileEncoding="UTF-8-BOM")
 stateFips <- fipsCodes %>% filter(Summary.Level == 40) %>% 
   select(State.Code..FIPS., Area.Name..including.legal.statistical.area.description.) %>%
   rename(State = Area.Name..including.legal.statistical.area.description.) %>%
   rename(StateFIPS = State.Code..FIPS.)
-stAbbrs <- read.csv("Data/state-abbrs.csv", fileEncoding="UTF-8-BOM")
+stAbbrs <- read.csv("./Data/state-abbrs.csv", fileEncoding="UTF-8-BOM")
 big50 <- big50 %>% left_join(stAbbrs, by="StAbbr") %>%
   left_join(stateFips, by="State")
 placeFips <- fipsCodes %>% filter(Summary.Level == 162) %>%
@@ -68,4 +69,4 @@ placeFips <- fipsCodes %>% filter(Summary.Level == 162) %>%
   rename(StateFIPS = State.Code..FIPS.) %>%
   rename(PlaceFIPS = Place.Code..FIPS.) %>%
   rename(Place = Area.Name..including.legal.statistical.area.description.)
-placeFips$Place <- str_replace_all(placeFips$Place, "[:space:](?:(?:city)|(?:town)|(?:township))$", "")
+big50 <- makeMatches(big50, placeFips)
