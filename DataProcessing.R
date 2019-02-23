@@ -55,12 +55,12 @@ big50$PrincipalCity <- citiesStates[,1]
 big50$StAbbr <- citiesStates[,2]
 
 # Correlate to FIPS Codes
-fipsCodes <- read.csv("./Data/all-geocoding-v2017.csv", fileEncoding="UTF-8-BOM")
+fipsCodes <- read.csv("Data/all-geocoding-v2017.csv", fileEncoding="UTF-8-BOM")
 stateFips <- fipsCodes %>% filter(Summary.Level == 40) %>% 
   select(State.Code..FIPS., Area.Name..including.legal.statistical.area.description.) %>%
   rename(State = Area.Name..including.legal.statistical.area.description.) %>%
   rename(StateFIPS = State.Code..FIPS.)
-stAbbrs <- read.csv("./Data/state-abbrs.csv", fileEncoding="UTF-8-BOM")
+stAbbrs <- read.csv("Data/state-abbrs.csv", fileEncoding="UTF-8-BOM")
 big50 <- big50 %>% left_join(stAbbrs, by="StAbbr") %>%
   left_join(stateFips, by="State")
 placeFips <- fipsCodes %>% filter(Summary.Level == 162) %>%
