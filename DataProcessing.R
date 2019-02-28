@@ -15,7 +15,19 @@ getClimateData <- function(url) {
   url <- paste(urlPrefix, url, sep="")
   request <- GET(url, add_headers(token=authToken))
   json <- content(request, as="text")
-  return(fromJSON(json))
+  json <- fromJSON(json)
+  # If it fails due to ratelimiting, try again after a second
+  if (("status" %in% names(json)) & (json$status == "429")) {
+    Sys.sleep(1)
+    request <- GET(url, add_headers(token=authToken))
+    json <- content(request, as="text")
+    json <- fromJSON(json)
+  }
+  if ("results" %in% names(json)) {
+    return(json$results)
+  } else {
+    return(json)
+  }
 }
 
 # Get data from the census API
@@ -134,3 +146,11 @@ big50 <- big50 %>% mutate(SouthBound = Latitude - .14493,
 # 10 miles of longitude = 1/mpdl * 10
   mutate(WestBound = Longitude - (10 / (cos(Latitude * (pi/180)) * 69)),
          EastBound = Longitude + (10 / (cos(Latitude * (pi/180)) * 69)))
+
+# Vectorize getClimateData function
+getClimateDataVec <- Vectorize(getClimateData)
+# Get lists of stations for each metro area
+big50 <- big50 %>% 
+  mutate(StationList = getClimateDataVec(paste("stations?extent=",
+                                               SouthBound, WestBound,
+                                               NorthBound, EastBound, sep="")))
