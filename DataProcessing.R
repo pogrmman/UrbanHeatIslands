@@ -3,10 +3,12 @@ library(stringr)
 #install.packages("httr")
 #install.packages("dplyr")
 #install.packages("fuzzyjoin")
+#install.packages("tidyr")
 library(jsonlite)
 library(httr)
 library(dplyr)
 library(fuzzyjoin)
+library(tidyr)
 
 # Get data from the climate bureau API
 getClimateData <- function(url) {
@@ -17,17 +19,13 @@ getClimateData <- function(url) {
   json <- content(request, as="text")
   json <- fromJSON(json)
   # If it fails due to ratelimiting, try again after a second
-  if (("status" %in% names(json)) & (json$status == "429")) {
+  if ("status" %in% names(json)) {
     Sys.sleep(1)
     request <- GET(url, add_headers(token=authToken))
     json <- content(request, as="text")
     json <- fromJSON(json)
   }
-  if ("results" %in% names(json)) {
-    return(json$results)
-  } else {
-    return(json)
-  }
+  return(data.frame(json$results))
 }
 
 # Get data from the census API
@@ -48,6 +46,7 @@ getDataType <- function(data, type) {
 }
 
 # Get population of all metro areas July 1, 2016
+print("Fetching list of metro areas")
 metroPops <- getCensusData("2016/pep/population?get=POP,GEONAME&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*&DATE=9")
 # Cleanup data
 names <- metroPops[1,]
@@ -71,6 +70,7 @@ big50$StAbbr <- citiesStates[,2]
 rm(stAbbrs)
 
 # Correlate to FIPS Codes
+print("Looking up FIPS Codes")
 fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", 
                       fileEncoding="UTF-8-BOM")
 stateFips <- fipsCodes %>% filter(Summary.Level == 40) %>% 
@@ -109,6 +109,7 @@ rm(prFips)
 rm(fipsCodes)
 
 # Correlate FIPS codes to Latitude/Longitude
+print("Looking up Latitude/Longtiude")
 locations <- read.csv("./Data/NationalFedCodes_20181201.txt", sep="|")
 # Cities use county codes in PR
 prLocations <- locations %>% filter(STATE_NUMERIC == 72) %>%
@@ -142,21 +143,31 @@ big50 <- big50 %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
 rm(locations)
 rm(prLocations)
 
-# Get box 20 miles on a side centered on each city
+# Get box 40 miles on a side centered on each city
 # 1 degree of latitude ~ 69 miles (only varies ~1% from equator to poles)
-# 10 miles ~ .14493 degrees of latitude
-big50 <- big50 %>% mutate(SouthBound = Latitude - .14493, 
-                          NorthBound = Latitude + .14493) %>%
+# 20 miles ~ 1/69 * 20 degrees of latitude
+print("Calculating box around principal city")
+big50 <- big50 %>% mutate(SouthBound = round(Latitude - (20 / 69), 5), 
+                          NorthBound = round(Latitude + (20 / 69), 5)) %>%
 # 1 degree of longitude ~ 69 miles at equator
 # miles per degree of longitude = cos(latitude) * 69
-# 10 miles of longitude = 1/mpdl * 10
-  mutate(WestBound = Longitude - (10 / (cos(Latitude * (pi/180)) * 69)),
-         EastBound = Longitude + (10 / (cos(Latitude * (pi/180)) * 69)))
+# 20 miles of longitude = 1/mpdl * 20
+  mutate(WestBound = round(Longitude - (20 / (cos(Latitude * (pi/180)) * 69)), 5),
+         EastBound = round(Longitude + (20 / (cos(Latitude * (pi/180)) * 69)), 5))
 
-# Vectorize getClimateData function
-getClimateDataVec <- Vectorize(getClimateData)
 # Get lists of stations for each metro area
+print("Getting climate stations")
 big50 <- big50 %>% 
-  mutate(StationList = getClimateDataVec(paste("stations?extent=",
-                                               SouthBound, WestBound,
-                                               NorthBound, EastBound, sep="")))
+  mutate(StationList = mapply(function(s, w, n, e) {
+    getClimateData(paste("stations?extent=", s, ",", w, ",", n, ",", e, 
+                         "&enddate=1965-01-01",
+                         "&startdate=2015-01-01",
+                         "&sortfield=mindate",
+                         "&datasetid=GHCND", sep=""))},
+    SouthBound, WestBound, NorthBound, EastBound, SIMPLIFY=FALSE)) %>%
+  select(-SouthBound, -WestBound, -NorthBound, -EastBound) %>%
+  unnest () %>% filter(datacoverage > .5) %>% group_by(MetroName)
+
+# Calculate distance in km to each station from city center
+big50 <- big50 %>% mutate(Dist = distCosine(cbind(Longitude, Latitude),
+                                            cbind(longitude, latitude))/1000)
