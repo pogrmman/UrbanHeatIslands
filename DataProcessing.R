@@ -58,7 +58,8 @@ big50$PrincipalCity <- citiesStates[,1]
 big50$StAbbr <- citiesStates[,2]
 
 # Correlate to FIPS Codes
-fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", fileEncoding="UTF-8-BOM")
+fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", 
+                      fileEncoding="UTF-8-BOM")
 stateFips <- fipsCodes %>% filter(Summary.Level == 40) %>% 
   select(State.Code..FIPS., 
          Area.Name..including.legal.statistical.area.description.) %>%
@@ -87,6 +88,38 @@ big50 <- big50 %>% mutate(PlaceRe = paste("^", PrincipalCity, sep="")) %>%
 big50 <- placeFips %>% 
   regex_right_join(big50, by=c(StateFIPS = "StateCodeRe", 
                                Place = "PlaceRe")) %>%
-  select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -DATE) %>%
+  select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -DATE, -Place) %>%
   rename(StateFIPS = StateFIPS.y) %>%
   filter(!duplicated(PrincipalCity))
+
+# Correlate FIPS codes to Latitude/Longitude
+locations <- read.csv("./Data/NationalFedCodes_20181201.txt", sep="|")
+# Cities use county codes in PR
+prLocations <- locations %>% filter(STATE_NUMERIC == 72) %>%
+  # Only needed variables
+  select(CENSUS_CODE, COUNTY_NUMERIC, CENSUS_CLASS_CODE, STATE_NUMERIC,
+         COUNTY_SEQUENCE, PRIMARY_LATITUDE, PRIMARY_LONGITUDE) %>%
+  # Only cities
+  filter(COUNTY_SEQUENCE == 1, CENSUS_CLASS_CODE == "U5") %>%
+  # Remove unneeded variables
+  select(-CENSUS_CLASS_CODE, -COUNTY_SEQUENCE) %>%
+  # Rename county code to place code
+  mutate(CENSUS_CODE = as.numeric(as.character(COUNTY_NUMERIC))) %>%
+  # Unselect county code
+  select(-COUNTY_NUMERIC)
+locations <- locations %>% 
+  # Use only variables we need
+  select(CENSUS_CODE, CENSUS_CLASS_CODE, STATE_NUMERIC, 
+         COUNTY_SEQUENCE, PRIMARY_LATITUDE, PRIMARY_LONGITUDE) %>%
+  # Only cities and the primary county they're in
+  filter(COUNTY_SEQUENCE == 1, substr(CENSUS_CLASS_CODE,1,1) == "C") %>%
+  # Remove unnecessary variables
+  select(-CENSUS_CLASS_CODE,-COUNTY_SEQUENCE) %>%
+  # Convert CENSUS_CODE to numeric
+  mutate(CENSUS_CODE = as.numeric(as.character(CENSUS_CODE))) %>%
+  bind_rows(prLocations)
+big50 <- big50 %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
+                                             "PlaceFIPS" = "CENSUS_CODE")) %>%
+  rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`) %>%
+  rename(MetroName = GEONAME, Latitude = PRIMARY_LATITUDE, 
+         Longitude = PRIMARY_LONGITUDE, Population = POP)
