@@ -17,12 +17,12 @@ getClimateData <- function(url) {
   json <- content(request, as="text")
   json <- fromJSON(json)
   # If it fails due to ratelimiting, try again after a second
-  if (("status" %in% names(json)) & (json$status == "429")) {
-    Sys.sleep(1)
-    request <- GET(url, add_headers(token=authToken))
-    json <- content(request, as="text")
-    json <- fromJSON(json)
-  }
+ # if (("status" %in% names(json)) & (json$status == "429")) {
+  #  Sys.sleep(1)
+   # request <- GET(url, add_headers(token=authToken))
+    #json <- content(request, as="text")
+    #json <- fromJSON(json)
+  #}
   if ("results" %in% names(json)) {
     return(json$results)
   } else {
@@ -68,6 +68,7 @@ pat <- "^([A-Z][a-z\\.]+(?:[/[:space:]](?:[A-Z][a-z\\.]+))*)[^,]*,[:space:]([A-Z
 citiesStates <- str_match(big50$GEONAME, pat)[,2:3]
 big50$PrincipalCity <- citiesStates[,1]
 big50$StAbbr <- citiesStates[,2]
+rm(stAbbrs)
 
 # Correlate to FIPS Codes
 fipsCodes <- read.csv("./Data/all-geocodes-v2017.csv", 
@@ -103,6 +104,9 @@ big50 <- placeFips %>%
   select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -DATE, -Place) %>%
   rename(StateFIPS = StateFIPS.y) %>%
   filter(!duplicated(PrincipalCity))
+rm(placeFips)
+rm(prFips)
+rm(fipsCodes)
 
 # Correlate FIPS codes to Latitude/Longitude
 locations <- read.csv("./Data/NationalFedCodes_20181201.txt", sep="|")
@@ -135,6 +139,8 @@ big50 <- big50 %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
   rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`) %>%
   rename(MetroName = GEONAME, Latitude = PRIMARY_LATITUDE, 
          Longitude = PRIMARY_LONGITUDE, Population = POP)
+rm(locations)
+rm(prLocations)
 
 # Get box 20 miles on a side centered on each city
 # 1 degree of latitude ~ 69 miles (only varies ~1% from equator to poles)
