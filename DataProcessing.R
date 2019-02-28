@@ -123,3 +123,14 @@ big50 <- big50 %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
   rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`) %>%
   rename(MetroName = GEONAME, Latitude = PRIMARY_LATITUDE, 
          Longitude = PRIMARY_LONGITUDE, Population = POP)
+
+# Get box 20 miles on a side centered on each city
+# 1 degree of latitude ~ 69 miles (only varies ~1% from equator to poles)
+# 10 miles ~ .14493 degrees of latitude
+big50 <- big50 %>% mutate(SouthBound = Latitude - .14493, 
+                          NorthBound = Latitude + .14493) %>%
+# 1 degree of longitude ~ 69 miles at equator
+# miles per degree of longitude = cos(latitude) * 69
+# 10 miles of longitude = 1/mpdl * 10
+  mutate(WestBound = Longitude - (10 / (cos(Latitude * (pi/180)) * 69)),
+         EastBound = Longitude + (10 / (cos(Latitude * (pi/180)) * 69)))
