@@ -17,12 +17,12 @@ getClimateData <- function(url) {
   json <- content(request, as="text")
   json <- fromJSON(json)
   # If it fails due to ratelimiting, try again after a second
- # if (("status" %in% names(json)) & (json$status == "429")) {
-  #  Sys.sleep(1)
-   # request <- GET(url, add_headers(token=authToken))
-    #json <- content(request, as="text")
-    #json <- fromJSON(json)
-  #}
+  if (("status" %in% names(json)) & (json$status == "429")) {
+    Sys.sleep(1)
+    request <- GET(url, add_headers(token=authToken))
+    json <- content(request, as="text")
+    json <- fromJSON(json)
+  }
   if ("results" %in% names(json)) {
     return(json$results)
   } else {
