@@ -20,19 +20,35 @@ getMetros <- function(number) {
   # Convert POP from char factor to number
   metroPops$POP <- as.numeric(as.character(metroPops$POP))
   # Sort in descending order by population
-  metroPops <- metroPops[order(metroPops$POP, decreasing=TRUE),]
+  metroPops <- metroPops[order(metroPops$POP, decreasing=TRUE),] %>%
+    rename(MetroName = GEONAME) %>% select(-POP) %>%
+   rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`)
+  metroPops$MetroCode <- as.numeric(as.character(metroPops$MetroCode))
   return(metroPops[1:number,])
+}
+
+# Get the counties that make up each metro area
+getCounties <- function(metros) {
+  print("Finding counties")
+  metroAreas <- read.csv("./Data/MetroAreas.csv", fileEncoding="UTF-8-BOM")
+  metroAreas <- metroAreas %>% 
+    select(CBSA.Code, FIPS.State.Code, FIPS.County.Code)
+  metroAreas$CBSA.Code <- as.numeric(as.character(metroAreas$CBSA.Code))
+  metros <- metros %>% 
+    left_join(metroAreas, by=c("MetroCode" = "CBSA.Code")) %>%
+    group_by(MetroName)
+  return(metros)
 }
 
 # Extract Principal City and State
 getCities <- function(metros) {
   print("Finding principal city")
   pat <- "(.*)[:space:](Metro Area)$"
-  metros$GEONAME <- str_match(metros$GEONAME, pat)[,2]
+  metros$MetroName <- str_match(metros$MetroName, pat)[,2]
   # Assume principal city and state are first listed in name
   pat <- paste("^([A-Z][a-z\\.]+(?:[/[:space:]](?:[A-Z][a-z\\.]+))*)",
                "[^,]*,[:space:]([A-Z]{2})", sep="")
-  citiesStates <- str_match(metros$GEONAME, pat)[,2:3]
+  citiesStates <- str_match(metros$MetroName, pat)[,2:3]
   metros$PrincipalCity <- citiesStates[,1]
   metros$StAbbr <- citiesStates[,2]
   return(metros)
@@ -107,9 +123,7 @@ latLongCorrelate <- function(metros) {
     bind_rows(prLocations)
   metros <- metros %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
                                                "PlaceFIPS" = "CENSUS_CODE")) %>%
-    rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`) %>%
-    rename(MetroName = GEONAME, Latitude = PRIMARY_LATITUDE, 
-           Longitude = PRIMARY_LONGITUDE, Population = POP)
+    rename(Latitude = PRIMARY_LATITUDE, Longitude = PRIMARY_LONGITUDE)
   return(metros)
 }
 

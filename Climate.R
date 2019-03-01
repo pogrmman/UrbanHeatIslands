@@ -3,7 +3,7 @@ library(dplyr)
 library(tidyr)
 library(geosphere)
 ### Project Functions ###
-source("./APICalls.R")
+source("./APICalls.R", local=TRUE)
 
 ### Functions ###
 # Get lists of stations for each metro area

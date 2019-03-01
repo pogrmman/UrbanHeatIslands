@@ -28,12 +28,26 @@ getCensusData <- function(url) {
   urlPostfix <- paste("&key=", authToken, sep="")
   url <- paste(urlPrefix, url, urlPostfix, sep="")
   request <- GET(url)
-  json <- content(request, as="text")
-  return(fromJSON(json))
+  if (status_code(request) == 200) {
+    json <- content(request, as="text")
+    return(fromJSON(json))
+  } else {
+    return(NA)
+  }  
 }
 
 # Grab climate data of one type
 getDataType <- function(data, type) {
   data <- data$results
   return(data[data$datatype == type,])
+}
+
+# Grab census population data for counties in states
+censusPop <- function(county, state, baseUrl) {
+  results <- getCensusData(paste(baseUrl, county, "&in=state:", state, sep=""))
+  if(!is.na(results)) {
+    return(results[2,1])
+  } else {
+    return(NA)
+  }
 }
