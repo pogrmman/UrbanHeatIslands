@@ -4,11 +4,12 @@ library(dplyr)
 source("./APICalls.R")
 source("./Locations.R")
 source("./Climate.R")
+source("./CensusData.R")
 
-# Get biggest 50 metro areas and their principal cities
-metros <- getMetros(50) %>% getCounties()
-# Get FIPS codes and locations
-metros <- fipsCorrelate(metros) %>% latLongCorrelate()
+# Get biggest 100 metro areas and their populations from 1970 to 2010
+metros <- getMetros(100) %>% getCounties() %>% getCensusPopulation()
+# Principal cities, FIPS codes, and locations
+metros <- getCities(metros) %>% fipsCorrelate() %>% latLongCorrelate()
 # Calculate 40 mile box around each metro area
 metros <- calculateRegion(metros, 40)
 # Get climate stations

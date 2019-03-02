@@ -21,7 +21,8 @@ getMetros <- function(number) {
   metroPops$POP <- as.numeric(as.character(metroPops$POP))
   # Sort in descending order by population
   metroPops <- metroPops[order(metroPops$POP, decreasing=TRUE),] %>%
-    rename(MetroName = GEONAME) %>% select(-POP) %>%
+    rename(MetroName = GEONAME) %>% select(-POP, -DATE) %>%
+    filter(!str_detect(MetroName, ", PR Metro Area$")) %>%
    rename(MetroCode = `metropolitan statistical area/micropolitan statistical area`)
   metroPops$MetroCode <- as.numeric(as.character(metroPops$MetroCode))
   return(metroPops[1:number,])
@@ -73,21 +74,12 @@ fipsCorrelate <- function(metros) {
     rename(StateFIPS = State.Code..FIPS.) %>%
     rename(PlaceFIPS = Place.Code..FIPS.) %>%
     rename(Place = Area.Name..including.legal.statistical.area.description.)
-  # Puerto Rico Cities are Classified as Counties
-  prFips <- fipsCodes %>% filter(State.Code..FIPS. == 72) %>%
-    filter(Summary.Level == 50) %>%
-    select(State.Code..FIPS., County.Code..FIPS., 
-           Area.Name..including.legal.statistical.area.description.) %>%
-    rename(StateFIPS = State.Code..FIPS.) %>%
-    rename(PlaceFIPS = County.Code..FIPS.) %>%
-    rename(Place = Area.Name..including.legal.statistical.area.description.)
-  placeFips <- placeFips %>% bind_rows(prFips)
   metros <- metros %>% mutate(PlaceRe = paste("^", PrincipalCity, sep="")) %>%
     mutate(StateCodeRe = paste("^", paste(StateFIPS, "$", sep=""), sep=""))
   metros <- placeFips %>% 
     regex_right_join(metros, by=c(StateFIPS = "StateCodeRe", 
                                  Place = "PlaceRe")) %>%
-    select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -DATE, -Place) %>%
+    select(-StateCodeRe, -PlaceRe, -StateFIPS.x, -Place) %>%
     rename(StateFIPS = StateFIPS.y) %>%
     filter(!duplicated(PrincipalCity))
   return(metros)
@@ -97,30 +89,18 @@ fipsCorrelate <- function(metros) {
 latLongCorrelate <- function(metros) {
   print("Looking up Latitude/Longtiude")
   locations <- read.csv("./Data/NationalFedCodes_20181201.txt", sep="|")
-  # Cities use county codes in PR
-  prLocations <- locations %>% filter(STATE_NUMERIC == 72) %>%
-    # Only needed variables
-    select(CENSUS_CODE, COUNTY_NUMERIC, CENSUS_CLASS_CODE, STATE_NUMERIC,
-           COUNTY_SEQUENCE, PRIMARY_LATITUDE, PRIMARY_LONGITUDE) %>%
-    # Only cities
-    filter(COUNTY_SEQUENCE == 1, CENSUS_CLASS_CODE == "U5") %>%
-    # Remove unneeded variables
-    select(-CENSUS_CLASS_CODE, -COUNTY_SEQUENCE) %>%
-    # Rename county code to place code
-    mutate(CENSUS_CODE = as.numeric(as.character(COUNTY_NUMERIC))) %>%
-    # Unselect county code
-    select(-COUNTY_NUMERIC)
   locations <- locations %>% 
     # Use only variables we need
     select(CENSUS_CODE, CENSUS_CLASS_CODE, STATE_NUMERIC, 
            COUNTY_SEQUENCE, PRIMARY_LATITUDE, PRIMARY_LONGITUDE) %>%
     # Only cities and the primary county they're in
-    filter(COUNTY_SEQUENCE == 1, substr(CENSUS_CLASS_CODE,1,1) == "C") %>%
+    filter(COUNTY_SEQUENCE == 1, 
+           (substr(CENSUS_CLASS_CODE,1,1) == "C" | 
+            substr(CENSUS_CLASS_CODE,1,2) == "U2")) %>%
     # Remove unnecessary variables
     select(-CENSUS_CLASS_CODE,-COUNTY_SEQUENCE) %>%
     # Convert CENSUS_CODE to numeric
-    mutate(CENSUS_CODE = as.numeric(as.character(CENSUS_CODE))) %>%
-    bind_rows(prLocations)
+    mutate(CENSUS_CODE = as.numeric(as.character(CENSUS_CODE)))
   metros <- metros %>% left_join(locations, by=c("StateFIPS" = "STATE_NUMERIC",
                                                "PlaceFIPS" = "CENSUS_CODE")) %>%
     rename(Latitude = PRIMARY_LATITUDE, Longitude = PRIMARY_LONGITUDE)
