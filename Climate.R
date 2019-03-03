@@ -44,7 +44,7 @@ getTemperatures <- function(metros) {
                                   date = str_extract(date,
                                          "[0-9]{4}-[0-9]{2}-[0-9]{2}")) %>%
       separate(date, into=c("Year", "Month", "Day"), sep="-") %>% 
-      mutate(decade = floor(as.numeric(Year)/10) * 10)
+      mutate(Decade = floor(as.numeric(Year)/10) * 10)
     return(results)
   }
   # Get data for each metro area
@@ -57,9 +57,9 @@ getTemperatures <- function(metros) {
     gather(key=PopYear, value=Population, Population1970, 
            Population1980, Population1990, Population2000, Population2010) %>% 
     mutate(PopYear = str_extract(PopYear, "[0-9]{4}")) %>% 
-    filter(PopYear == decade) %>%
+    filter(PopYear == Decade) %>%
     select(Year, Month, Day, station, latitude, longitude, elevation, datatype, 
-           value, MetroName, Latitude, Longitude, Dist, Population) %>%
+           value, MetroName, Latitude, Longitude, Dist, Population, Decade) %>%
     rename(Station = station, StationLat = latitude, StationLong = longitude,
            StationElev = elevation, TempType = datatype, Temperature = value, 
            CityLat = Latitude, CityLong = Longitude, StationDist = Dist)
