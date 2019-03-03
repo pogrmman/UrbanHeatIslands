@@ -1,5 +1,11 @@
+# R Project Stuff
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+# IPUMS NHGIS
 Data/nhgis0001_csv/
+# Daily Temperature Data (it's big!)
+Data/Batch1.csv
+Data/Batch2.csv
+Data/Batch3.csv
