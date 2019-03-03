@@ -23,5 +23,5 @@ batch3 <- metros[409:420,]
 # The following lines must be run one at a time, on different days:
 # batch1Temps <- getTemperatures(batch1)
 # batch2Temps <- getTemperatures(batch2)
-# batch3Temps <- getTemperatures(batch3)
+# batch3Temps <- getTemperatures(batch3) -- Done
 allTemps <- bind_rows(batch1Temps, batch2Temps, batch3Temps)
