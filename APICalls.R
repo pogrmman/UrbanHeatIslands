@@ -36,12 +36,6 @@ getCensusData <- function(url) {
   }  
 }
 
-# Grab climate data of one type
-getDataType <- function(data, type) {
-  data <- data$results
-  return(data[data$datatype == type,])
-}
-
 # Grab census population data for counties in states
 censusPop <- function(county, state, baseUrl) {
   results <- getCensusData(paste(baseUrl, county, "&in=state:", state, sep=""))
