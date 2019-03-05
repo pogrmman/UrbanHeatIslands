@@ -30,15 +30,9 @@ getStations <- function(metros) {
 getTemperatures <- function(metros) {
   getData <- function(station) {
     year <- 1966
-    url <- paste("data?datasetid=GHCND&startdate=", year, "-01-01&enddate=",
-                 year, "-12-31&stationid=", station, 
-                 "&datatypeid=TMAX,TMIN&limit=730", sep="")
-    results <- getClimateData(url)
+    results <- getTempData(station, year)
     for (year in 1967:2015) {
-      url <- paste("data?datasetid=GHCND&startdate=", year, "-01-01&enddate=",
-                   year, "-12-31&stationid=", station, 
-                   "&datatypeid=TMAX,TMIN&limit=730", sep="")
-      results <- results %>% bind_rows(getClimateData(url))
+      results <- results %>% bind_rows(getTempData(station, year))
     }
     results <- results %>% mutate(value = value / 10,
                                   date = str_extract(date,

@@ -20,6 +20,22 @@ getClimateData <- function(url) {
   }
   return(data.frame(json$results))
 }
+# Get temperature data from the climate bureau API
+getTempData <- function(station, year) {
+  url <- paste("data?datasetid=GHCND&startdate=", year, "-01-01&enddate=",
+               year, "-12-31&stationid=", station, 
+               "&datatypeid=TMAX,TMIN&limit=730", sep="")
+  data <- getClimateData(url)
+  # Make a dummy datastructure to allow for seamless integration
+  if (!("value" %in% names(data))) {
+    data <- data.frame(date = paste(year,"-00-00",sep=""),
+                       datatype = "ERROR",
+                       station = station,
+                       attributes = "NULL",
+                       value = 0)
+  }
+  return(data)
+}
 
 # Get data from the census API
 getCensusData <- function(url) {
