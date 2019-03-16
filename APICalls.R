@@ -10,15 +10,18 @@ getClimateData <- function(url) {
   url <- paste(urlPrefix, url, sep="")
   request <- GET(url, add_headers(token=authToken))
   json <- content(request, as="text")
-  json <- fromJSON(json)
   # If it fails due to ratelimiting, try again after a second
   if ("status" %in% names(json)) {
     Sys.sleep(1)
     request <- GET(url, add_headers(token=authToken))
     json <- content(request, as="text")
-    json <- fromJSON(json)
   }
-  return(data.frame(json$results))
+  if (validate(json)) {
+    json <- fromJSON(json)
+    return(data.frame(json$results))
+  } else {
+    return(data.frame(datatype = "ERROR"))
+  }
 }
 # Get temperature data from the climate bureau API
 getTempData <- function(station, year) {
