@@ -26,7 +26,7 @@ colnames(temperatures) <- c("Year", "Month", "Day", "Station", "TempType",
                             "Attributes", "Temperature", "Decade", "Error")
 # The following lines must be run one at a time, on different days:
 # batch1Temps <- getTemperatures(batch1) -- Done
-# batch2Temps <- getTemperatures(batch2)
+# batch2Temps <- getTemperatures(batch2) -- Done
 # batch3Temps <- getTemperatures(batch3) -- Done
 allTemps <- bind_rows(batch1Temps, batch2Temps, batch3Temps)
 
@@ -43,7 +43,7 @@ getVals <- function(type, temp, max, min, op) {
 allTemps <- allTemps %>% group_by(Station, Month) %>%
   mutate(MeanMonthlyMax = mean(Temperature[TempType=="TMAX"], na.rm = TRUE),
          MeanMonthlyMin = mean(Temperature[TempType=="TMIN"], na.rm = TRUE),
-         MeanMonthly = mean(Temperature), na.rm = TRUE) %>%
+         MeanMonthly = mean(Temperature, na.rm = TRUE)) %>%
   ungroup() %>% 
   mutate(Deviation = mapply(function(type, temp, max, min) {
     getVals(type, temp, max, min, "-")
