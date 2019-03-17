@@ -76,3 +76,14 @@ decadeAvgs <- decadeStats %>% group_by(Station, Decade) %>%
   summarize(StdMax = mean(StdMaxMonthlyDecade, na.rm = TRUE),
             StdMin = mean(StdMinMonthlyDecade, na.rm = TRUE), 
             StdMean = mean(StdMeanMonthlyDecade, na.rm = TRUE))
+
+# Grab station information
+stations <- dailyDeviations %>% select(Station, StationLat, StationLong,
+                                       StationElev, MetroName, CityLat, 
+                                       CityLong, StationDist, Population,
+                                       Decade) %>% distinct()
+
+# Correlate with decade info
+decadeAvgs <- decadeAvgs %>% left_join(stations, by=c("Station", "Decade"))
+decadeStats <- decadeStats %>% left_join(stations, by=c("Station", "Decade"))
+monthlyAvgs <- decadeStats %>% left_join(stations, by=c("Station", "Decade"))
