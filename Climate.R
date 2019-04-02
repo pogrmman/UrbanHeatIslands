@@ -60,10 +60,10 @@ getTemperatures <- function(metros) {
     }
   }
   # Exclude bad temperatures
-  temperatures <<- temperatures %>% 
-    separate(Attributes, into = c("MeasureFlag", "QualFlag", 
-                                  "SourceFlag", "Time")) %>%
-    filter(QualFlag == "") %>% select(-MeasureFlag, -QualFlag, -SourceFlag, 
+  temperatures <<- temperatures %>%
+    separate(Attributes, into = c("MeasureFlag", "QualFlag",
+                                  "SourceFlag", "Time"), sep = ",") %>%
+    filter(QualFlag == "") %>% select(-MeasureFlag, -QualFlag, -SourceFlag,
                                       -Time)
   # Tidy data
   allData <- temperatures %>% left_join(metros, by=c(Station = "id")) %>%
