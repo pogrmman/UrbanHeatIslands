@@ -1,5 +1,6 @@
 ### Packages ####
 library(dplyr)
+library(tidyr)
 
 # Utility function to do calculations differently on different temp types
 getVals <- function(type, temp, max, min, op) {
@@ -10,18 +11,19 @@ getVals <- function(type, temp, max, min, op) {
   }
 }
 
-# Calculate monthly average highs and lows and daily deviation by station, then standardize
-monthlyAvgs <- allTemps %>% group_by(Station, Month) %>%
+# Calculate monthly average highs and lows by metro area
+monthlyAvgs <- allTemps %>% group_by(MetroName, Month) %>%
   summarize(MeanMonthlyMax = mean(Temperature[TempType=="TMAX"], na.rm = TRUE),
             MeanMonthlyMin = mean(Temperature[TempType=="TMIN"], na.rm = TRUE),
             MeanMonthly = mean(Temperature, na.rm = TRUE))
 
+# Calculate daily deviations from monthly averages and standardize by metro area
 dailyDeviations <- allTemps %>% left_join(monthlyAvgs, 
-                                          by=c("Station", "Month")) %>%
+                                          by=c("MetroName", "Month")) %>%
   mutate(Deviation = mapply(function(type, temp, max, min) {
     getVals(type, temp, max, min, "-")
   }, TempType, Temperature, MeanMonthlyMax, MeanMonthlyMin)) %>%
-  select(-Temperature) %>% group_by(Station, Month) %>%
+  select(-Temperature) %>% group_by(MetroName, Month) %>%
   mutate(StandardizedTemp = mapply(function(type, dev, max, min) {
       getVals(type, dev, max, min, "/")
     }, TempType, Deviation, sd(Deviation[TempType=="TMAX"], na.rm=TRUE), 
@@ -51,4 +53,28 @@ stations <- dailyDeviations %>% select(Station, StationLat, StationLong,
 # Correlate with decade info
 decadeAvgs <- decadeAvgs %>% left_join(stations, by=c("Station", "Decade"))
 decadeStats <- decadeStats %>% left_join(stations, by=c("Station", "Decade"))
-monthlyAvgs <- decadeStats %>% left_join(stations, by=c("Station", "Decade"))
+
+# Get number of days in bottom/top 1% of temperatures
+hottestDays <- dailyDeviations %>% filter(TempType == "TMAX") %>%
+  group_by(MetroName) %>% filter(StandardizedTemp > quantile(StandardizedTemp, .99)) %>% ungroup() %>%
+  group_by(Station, Decade) %>% summarize(HotDays = n())
+coldestDays <- dailyDeviations %>% filter(TempType == "TMAX") %>%
+  group_by(MetroName) %>% filter(StandardizedTemp < quantile(StandardizedTemp, .01)) %>% ungroup () %>%
+  group_by(Station, Decade) %>% summarize(ColdDays = n())
+hottestNights <- dailyDeviations %>% filter(TempType == "TMIN") %>%
+  group_by(MetroName) %>% filter(StandardizedTemp > quantile(StandardizedTemp, .99)) %>% ungroup() %>%
+  group_by(Station, Decade) %>% summarize(HotNights = n())
+coldestNights <- dailyDeviations %>% filter(TempType == "TMIN") %>%
+  group_by(MetroName) %>% filter(StandardizedTemp < quantile(StandardizedTemp, .01)) %>% ungroup () %>%
+  group_by(Station, Decade) %>% summarize(ColdNights = n())
+
+# Correlate with station info
+extremes <- hottestDays %>% left_join(coldestDays, by=c("Station", "Decade")) %>%
+  left_join(hottestNights, by=c("Station", "Decade")) %>% 
+  left_join(coldestNights, by=c("Station", "Decade")) %>%
+  left_join(stations, by=c("Station", "Decade")) %>%
+  replace_na(list(HotDays = 0,
+                  ColdDays = 0,
+                  HotNights = 0,
+                  ColdNights = 0)) %>% distinct()
+
