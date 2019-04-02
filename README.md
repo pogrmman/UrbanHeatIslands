@@ -24,3 +24,5 @@ making it easy to convert from the Census Bureau FIPS codes to latitudes and lon
 from [excel files available on the US Census Bureau's website.](https://www.census.gov/geographies/reference-files/2017/demo/popest/2017-fips.html)
 - `state-abbrs.csv` -- A comma-seperated file of states, territories, and their postal abbreviations. 
 [From the US Postal Service.](https://pe.usps.com/text/pub28/28apb.htm)
+- Census data was pulled from the [IPUMS NHGIS Database](http://doi.org/10.18128/D050.V13.0) instead of the Census Bureau API
+because the Census Bureau API only goes back until 1990 and doesn't have all the data in a consistent form. 
