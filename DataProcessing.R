@@ -77,4 +77,3 @@ extremes <- hottestDays %>% left_join(coldestDays, by=c("Station", "Decade")) %>
                   ColdDays = 0,
                   HotNights = 0,
                   ColdNights = 0)) %>% distinct()
-
