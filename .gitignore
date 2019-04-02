@@ -6,6 +6,8 @@
 # IPUMS NHGIS
 Data/nhgis0001_csv/
 # Daily Temperature Data (it's big!)
-Data/Batch1.csv
-Data/Batch2.csv
-Data/Batch3.csv
+Data/batch1GoodData.csv
+Data/batch2GoodData.csv
+Data/batch3GoodData.csv
+Data/allTemps.csv
+Data/standardizedTemps.csv
