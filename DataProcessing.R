@@ -46,7 +46,8 @@ decadeStats <- dailyDeviations %>% group_by(Station, Decade, Month) %>%
       return("Summer")
     } else if (month == 9 | month == 10 | month == 11) {
       return("Fall")
-    }}, Month))
+    }}, Month)) %>% 
+  mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall", "Winter")))
 
 # Calculate decadal standardized temperatures
 decadeAvgs <- decadeStats %>% group_by(Station, Decade) %>%
