@@ -30,13 +30,23 @@ dailyDeviations <- allTemps %>% left_join(monthlyAvgs,
                             sd(Deviation[TempType=="TMIN"], na.rm=TRUE))) %>% ungroup() %>%
   select(-Deviation)
 
-# Calculate the average standardized monthly temps by decade
+# Calculate the average standardized monthly temps by decade and make season column
 decadeStats <- dailyDeviations %>% group_by(Station, Decade, Month) %>%
   summarize(DecadeStdMonthlyMax = mean(StandardizedTemp[TempType=="TMAX"],
                                         na.rm = TRUE),
             DecadeStdMonthlyMin = mean(StandardizedTemp[TempType=="TMIN"],
                                        na.rm = TRUE),
-            DecadeStdMonthly = mean(StandardizedTemp, na.rm = TRUE))
+            DecadeStdMonthly = mean(StandardizedTemp, na.rm = TRUE)) %>%
+  mutate(Season = mapply(function(month) {
+    if (month == 12 | month == 1 | month == 2) {
+      return("Winter")
+    } else if (month == 3 | month == 4 | month == 5) {
+      return("Spring")
+    } else if (month == 6 | month == 7 | month == 8) {
+      return("Summer")
+    } else if (month == 9 | month == 10 | month == 11) {
+      return("Fall")
+    }}, Month))
 
 # Calculate decadal standardized temperatures
 decadeAvgs <- decadeStats %>% group_by(Station, Decade) %>%
