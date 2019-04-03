@@ -103,3 +103,27 @@ highsDist <- ggplot(decadeStats, aes(x=StationDist, y=DecadeStdMonthlyMax)) +
        x = "Distance to Center of Metro Area (km)",
        y = "Standardized Temperature") + facet_grid(. ~ Season)
 seasonsPlot <- grid.arrange(lowsPopulation, lowsDist, highsPopulation, highsDist, nrow=2)
+
+# Seasonal changes in UHI effect corrected for AGW
+lowsPopulationAGW <- ggplot(gwCorrected, aes(x=log(Population), StdMonthlyMin)) +
+  geom_point(color="#2A2A60", size = 1) + geom_smooth(method=lm, color="#00FFFF") + ylim(-2,2) +
+  labs(title = "Decadal Average Standardized Monthly Lows",
+       x = "log(Metro Population)",
+       y = "Standardized Temperature") + facet_grid(. ~ Season)
+lowsDistAGW <- ggplot(gwCorrected, aes(x=StationDist, y=StdMonthlyMin)) +
+  geom_point(color="#2A2A60", size = 1) + geom_smooth(method=lm, color="#00FFFF") + ylim(-2,2) +
+  labs(title = "Decadal Average Standardized Monthly Lows",
+       x = "Distance to Center of Metro Area (km)",
+       y = "Standardized Temperature") + facet_grid(. ~ Season)
+highsPopulationAGW <- ggplot(gwCorrected, aes(x=log(Population), y=StdMonthlyMax)) +
+  geom_point(color="#C88000", size = 1) + geom_smooth(method=lm, color="#FF0000") + ylim(-2,2) +
+  labs(title = "Decadal Average Standardized Monthly Highs",
+       x = "log(Metro Population)",
+       y = "Standardized Temperature") + facet_grid(. ~ Season)
+highsDistAGW <- ggplot(gwCorrected, aes(x=StationDist, y=StdMonthlyMax)) +
+  geom_point(color="#C88000", size = 1) + geom_smooth(method=lm, color="#FF0000") + ylim(-2,2) +
+  labs(title = "Decadal Average Standardized Monthly Highs",
+       x = "Distance to Center of Metro Area (km)",
+       y = "Standardized Temperature") + facet_grid(. ~ Season)
+seasonsPlotAGW <- grid.arrange(lowsPopulationAGW, lowsDistAGW, 
+                               highsPopulationAGW, highsDistAGW, nrow=2)

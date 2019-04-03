@@ -91,3 +91,26 @@ extremes <- hottestDays %>% left_join(coldestDays, by=c("Station", "Decade")) %>
 
 # Remove unnecessary info
 rm(coldestDays, coldestNights, hottestDays, hottestNights)
+
+# Try correcting for global warming
+# Get averages for most rural 15%
+thresh <- quantile(decadeStats$StationDist, .85)
+gwCorrection <- decadeStats %>% ungroup() %>% filter(StationDist > thresh)
+# Remove contribution from population and station distance to get correction factor
+minFit <- lm(DecadeStdMonthlyMin ~ log(Population) + StationDist, decadeStats)
+meanFit <- lm(DecadeStdMonthly ~ log(Population) +  StationDist, decadeStats)
+maxFit <- lm(DecadeStdMonthlyMax ~ log(Population) + StationDist, decadeStats)
+gwCorrection <- gwCorrection %>%
+  mutate(DecadeStdMonthlyMin = DecadeStdMonthlyMin - predict.lm(minFit, gwCorrection),
+         DecadeStdMonthly = DecadeStdMonthly - predict.lm(meanFit, gwCorrection),
+         DecadeStdMonthlyMax = DecadeStdMonthlyMax - predict.lm(maxFit, gwCorrection)) %>%
+  group_by(Decade) %>% summarize(MinCorrection = mean(DecadeStdMonthlyMin, na.rm = TRUE),
+                                        MeanCorrection = mean(DecadeStdMonthly, na.rm = TRUE),
+                                        MaxCorrection = mean(DecadeStdMonthlyMax, na.rm = TRUE))
+# Apply the factor
+gwCorrected <- decadeStats %>% left_join(gwCorrection, by=c("Decade")) %>%
+  mutate(StdMonthlyMin = DecadeStdMonthlyMin - MinCorrection,
+         StdMonthly = DecadeStdMonthly - MeanCorrection,
+         StdMonthlyMax = DecadeStdMonthlyMax - MaxCorrection)
+# Remove unneeded stuff
+rm(thresh, gwCorrection, minFit, meanFit, maxFit)
